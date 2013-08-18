@@ -1,9 +1,9 @@
 {
   "name": "Reddit Image Gallery",
-  "version": "1.0",
+  "version": "1.1.1",
   "description": "Creates an image gallery of all imgur images and albums",
   "permissions": [
-    "activeTab" , "tabs", "https://*/*","http://*/*"
+    "activeTab" , "tabs", "http://www.reddit.com/*"
   ],
   "background": {
     "scripts": ["eventHandler.js"]
@@ -11,7 +11,7 @@
   "content_scripts": [
   {
     "matches": ["http://www.reddit.com/*"],
-    "js": ["jquery.js"],
+    "js": ["jquery.js", "persistence.js"],
     "css": ["style.css"],
     "run_at": "document_start",
     "all_frames": true
