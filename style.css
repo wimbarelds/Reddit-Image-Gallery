@@ -16,7 +16,7 @@
     user-select: none;    
 }
 #GalleryContainer {
-    padding-right: 315px;
+    margin-right: 315px;
     display: none;
 }
 #GalleryContainer #ImgColumnTable {
@@ -76,6 +76,12 @@
     color: #FFF;
     transition: opacity .5s ease-in-out;
 }
+#GalleryContainer .GalleryImageContainer a.albumImage img {
+    max-width: 100%;
+    min-width: 100%;
+    margin-bottom: 5px;
+    border-style: none;    
+}
 #GalleryContainer .GalleryAlbumContainer > .ImageInfo {
     opacity: 1!important;
     bottom: 0px;
@@ -86,6 +92,8 @@
     padding-left: 5px;
     padding-right: 5px;
     text-align: center;
+    white-space: pre;
+    overflow: hidden;
 }
 #GalleryContainer .GalleryAlbumContainer > .ImageInfo > .AlbumThumbs > .albumThumb {
     display: inline-block;
@@ -139,16 +147,13 @@
 #GalleryContainer .GalleryImageContainer > span.albumControl {
     padding: 0px 5px;
     position: absolute;
-    top: 0px;
-    bottom: 55px;
+    top: 22px;
+    bottom: 110px;
     color: #FFF;
     line-height: 100%;
     cursor: pointer;
     opacity: 0.2;
     transition: opacity .5s ease-in-out;
-}
-#GalleryContainer .GalleryAlbumContainer > span.albumControl {
-    bottom: 110px;
 }
 #GalleryContainer .GalleryImageContainer > span.albumControl > div {
     position: absolute;
@@ -190,4 +195,36 @@
 #GalleryContainer .GalleryImageContainer > span.albumControl:hover {
     color: #FC0;
     opacity: 1;
+}
+
+.rig_icon {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    margin: auto auto -4px;
+    margin-left: 1px;
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAIAAAC0tAIdAAAAA3NCSVQICAjb4U/gAAAACXBIWXMAAAsSAAALEgHS3X78AAAAHHRFWHRTb2Z0d2FyZQBBZG9iZSBGaXJld29ya3MgQ1M26LyyjAAAABZ0RVh0Q3JlYXRpb24gVGltZQAwOS8xNC8xM7lVfK8AAAH1SURBVCiRTZI9TBRBGIaf2SwgAndgIod3F09FN2QpMCYYjVYWWtkRY2VjqzHxp7c2JgYbS0PsbEzsNBpNLKS08M7jUIHzZHMcP3ew7O7tzuxY7AJO9X5v3pnv+b6M0NdBCKCyg/2q2jnSN/v66rETh5zl4N6N983t4Ym7s4zkAcAE4d56CniNZmIVctlSYcDwd5Py/IWpgeI48OnjvAl6cO4BcHgHZm4DShpRJJQ0kvRac6OXwb233+pEUalQsPBXlBQqMpQUib281KAdp+l3P9uJqtd3SmdiQEpDSiGlAVi57PfHM7Zt73Nz5VQW+BGk7dreZr+72/a6AIHDt/t0MgBoE3AlgKdSItMwe4xe00hrXZzWJ8cAsfTZBLpKA6FKB4hUGCojUmF6O2jg+wck3Rgg1ADZ/tLM9BvbtitHK9n+EoEj1lfFkHuQrjrbQL21exFkrdaanHSgBXJhwbQszj5jf8prp4fTBYZDAz2GhC/wC1bhEmwtei/PzeeEA6AxnzyfGxnOAM7fP3fyxQxcBgtqKTU3H01NjE0ALx7OG1tbHc/zPc/3g26sYtOyRsvlvNaj5bJpWUCwov1F7S9qNGZzbX2ttQG0N1tSKbcbf6i5Vbnd+O0eH4+BytfA7fNS7kjGWmsgjBR67xf8d2r1Wkd0E/0PbO3qbWG2370AAAAASUVORK5CYII=');
+    background-repeat: no-repeat;
+}
+
+.rig_icon.active {
+    outline-offset: 1px;
+    outline: solid #0C0 1px;
+}
+
+.ImageTitleBar {
+    background-color: #000;
+    padding: 2px 4px;
+    color: #FFF;
+    line-height: 16px;
+}
+.ImageTitleBar .arrow {
+    display: inline-block;
+    margin: 2px 2px -2px 2px;
+}
+
+.rig_source {
+    float: right;
 }

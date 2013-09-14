@@ -1,16 +1,17 @@
-var toggleRedditImageGalleryState;
 var toggleRedditImageGallery = function() {
     // Create private scope
     (function() {
+        // Toggle our state if that function loaded
+        if (typeof toggleRedditImageGalleryState === "function") toggleRedditImageGalleryState();
+        // Check is Never Ending Reddit is enabled
         var neverEndingReddit = ($("#progressIndicator.neverEndingReddit").length > 0);
+        // Find the elements we need to use
         var $siteContainer = $("#siteTable");
-        var $isGallery = $siteContainer.data('IsGallery');
-        var $pageControls = $siteContainer.parent().children('p.nextprev');
-        
-        if (typeof $isGallery === "undefined" || $isGallery === null) {
-            $siteContainer.data('IsGallery', 'false');
-            $isGallery = "false";
+        var $pageControls = $siteContainer.parent().children('p.nextprev.RIG');
 
+        // Determine if the gallery has been initialized, initialize it if it's not
+        var isGallery = ($siteContainer.data('IsGallery') === "true");
+        if (!isGallery) {
             // No gallery exists yet, set the HTML up aswell
             var $gallery = $("<div>").attr("id", "GalleryContainer");
             $gallery.html(
@@ -22,25 +23,35 @@ var toggleRedditImageGallery = function() {
                 '</tr>' +
                 '</table>' +
                 '<div id="ImageLoader"></div>'
-                );
-            $gallery.data('images', JSON.stringify([]));
-            $gallery.data('inverval', JSON.stringify(null));
-            $gallery.insertBefore($siteContainer);
+                )
+                .data('images', JSON.stringify([]))
+                .data('inverval', JSON.stringify(null))
+                .insertBefore($siteContainer);
+
+            // If neverending reddit isn't enabled, we need the "next page / previous page" buttons.
             if (!neverEndingReddit) {
-                $pageControls = $('<p>').addClass('nextprev').html($siteContainer.find("p.nextprev").html()).insertAfter($gallery);
+                $pageControls = $('<p>').addClass('nextprev RIG').html($siteContainer.find("p.nextprev").html()).insertAfter($gallery);
             }
-            
         }
 
         var $gallery = $("#GalleryContainer");
         var $imageColumns = $gallery.find(".imgColumn");
+        // An invisible element in which elements can load before being added to the page
         var $imageLoader = $("#ImageLoader");
+        // Check if there is already an active setInterval active, if it is- we need to stop it before adding a new one
         var updateInterval = JSON.parse($gallery.data('inverval'));
 
-        function addItemToGallery(element, image) {
-            var $imgEle = $("<img>");
-            $imgEle.attr('src', image);
-            $imgEle.load(function() {
+        if (!isGallery) {
+            $siteContainer.data('IsGallery', 'true');
+            $gallery.show();
+            $pageControls.show();
+            $siteContainer.hide();
+
+            function preloadImage(image, callback) {
+                $("<img>").attr('src', image).load(callback);
+            }
+
+            function targetColumn() {
                 var shortest = null;
                 $imageColumns.each(function() {
                     if (shortest === null) {
@@ -54,57 +65,104 @@ var toggleRedditImageGallery = function() {
                         shortest = this;
                     }
                 });
-                if (shortest !== null)
-                    $(shortest).append(element);
-                $imgEle.remove();
-            });
-            $imageLoader.append($imgEle);
-        }
-
-        if ($isGallery === "false") {
-            $siteContainer.data('IsGallery', 'true');
-            $isGallery = "true";
-            $gallery.show();
-            $pageControls.show();
-            $siteContainer.hide();
+                return shortest;
+            }
 
             function UpdateGallery() {
+                // The links that have already been loaded
                 var curImages = JSON.parse($gallery.data('images'));
-                var $posts = $siteContainer.find('div.thing.link');
+                // Find all reddit posts no9t already added
+                var $posts = $siteContainer.find('div.thing.link:not(.added)');
+                var postNumCounter = curImages.length;
+                // Go through all these posts
                 $posts.each(function() {
+                    $(this).addClass('added');
+
                     var $titleEle = $(this).find('a.title').first();
-                    //var $votesEle = $(this).children('.midcol');
                     var title = $titleEle.text();
                     var link = $titleEle.attr('href');
+
+                    // Dont add this again if it's already been added
                     if ($.inArray(link, curImages) >= 0)
                         return;
-                    curImages.push(link);
 
-                    // Image without .jpg/.png/.gif
+                    curImages.push(link);
+                    var postNum = ++postNumCounter;
+
+                    // [IMGUR] Fix image link missing .jpg/.png/.gif
                     if (link.substring(0, 17) === "http://imgur.com/" && link.substring(17, 19) !== "a/") {
                         var split = link.substring(17).split(".");
                         if (split.length > 1) {
                             link = 'http://i.imgur.com/' + split[0] + '.' + split[1];
                         }
                         else {
+                            // Imgur doesn't care what extension we add
                             link = 'http://i.imgur.com/' + split[0] + '.png';
                         }
                     }
 
                     // Regular Imgur Image
                     if (link.substring(0, 19) === "http://i.imgur.com/") {
-                        var $commentsEle = $(this).find('.comments');
-                        var $imageDiv = $("<div>").addClass('GalleryImageContainer');
-                        var $imageInfo = $("<div>").addClass('ImageInfo').html('<h4><a href="' + link + '" target="_blank">' + title + '</a></h4>').append($commentsEle);
-                        $imageDiv.html('<a href="' + link + '" target="_blank"><img src="' + link + '" /></a>').append($imageInfo);
-                        addItemToGallery($imageDiv, link);
+                        var $this = $(this);
+                        var $titleDiv = $("<div>").addClass('ImageTitleBar');
+                        $this.find('.arrow').each(function(){
+                            var $arrow = $(this);
+                            var $clone = $arrow.clone();
+                            $clone.removeAttr('onclick');
+                            $clone.click(function(){
+                                $arrow.trigger('click');
+                                $clone.attr('class', $arrow.attr('class'));
+                            });
+                            $clone.appendTo($titleDiv);
+                        });
+                        var $source = $("<span>").addClass('rig_source').appendTo($titleDiv);
+                        var $sub = $this.find('a.subreddit');
+                        if($sub.length > 0) $source.text('Subreddit: ').append($sub).append(' | ');
+                        $("<span>").text("Source: ").append($this.find('span.domain a')).appendTo($source);
+                        
+                        var $commentsEle = $this.find('.comments');
+                        var $imageDiv = $("<div>").addClass('GalleryImageContainer').data('post_num', postNum);
+                        var $imageInfo = $("<div>").addClass('ImageInfo').append($("<h4>").append($("<a>").attr({href: link, target: '_blank', title: title}).text(title))).append($commentsEle);
+                        $imageDiv.html('<a href="' + link + '" target="_blank"><img src="' + link + '" /></a>').append($imageInfo).prepend($titleDiv);
+
+                        preloadImage(link, function() {
+                            var placed = false;
+                            var target = targetColumn();
+                            $(target).find('.GalleryImageContainer').each(function() {
+                                if ($this.data('post_num') > postNum) {
+                                    placed = true;
+                                    $imageDiv.insertBefore($(this));
+                                    return false;
+                                }
+                            });
+                            if (!placed) {
+                                $(target).append($imageDiv);
+                            }
+                        });
                     }
                     // Imgur Album
                     else if (link.substring(0, 19) === "http://imgur.com/a/") {
+                        var $this = $(this);
+                        var $titleDiv = $("<div>").addClass('ImageTitleBar');
+                        $this.find('.arrow').each(function(){
+                            var $arrow = $(this);
+                            var $clone = $arrow.clone();
+                            $clone.removeAttr('onclick');
+                            $clone.click(function(){
+                                $arrow.trigger('click');
+                                $clone.attr('class', $arrow.attr('class'));
+                            });
+                            $clone.appendTo($titleDiv);
+                        });
+                        var $source = $("<span>").addClass('rig_source').appendTo($titleDiv);
+                        var $sub = $this.find('a.subreddit');
+                        if($sub.length > 0) $source.text('Subreddit: ').append($sub).append(' | ');
+                        $("<span>").text("Source: ").append($this.find('span.domain a')).appendTo($source);
+                        
+                        var $commentsEle = $this.find('.comments');
                         var spliturl = link.substring(19).split("#");
                         var album = spliturl[0];
                         var imgNum = 0;
-                        var $commentsEle = $(this).find('.comments');
 
                         if (spliturl.length > 1)
                             imgNum = parseInt(spliturl[1]);
@@ -122,33 +180,27 @@ var toggleRedditImageGallery = function() {
                             ).success(function(data) {
                                 // Add all image URL's to a list
                                 var images = data.data;
+                                if (typeof images.images === "object" && images.images instanceof Array)
+                                    images = images.images;
+
                                 var imageList = [];
                                 for (var j in images) {
                                     if (images[j] === null)
                                         continue;
+
                                     imageList.push(images[j].link);
                                 }
 
                                 // Determine how many thumbnails we can show
-                                var albumWidth = $(".imgColumn")[0].scrollWidth;
+                                var albumWidth = $(".imgColumn")[0].scrollWidth - 20;
                                 var numThumbs = Math.floor((albumWidth - 5) / 50);
 
-                                // Generate html for all album images
-                                var imgHtml = "";
-
-                                for (var j in imageList) {
-                                    var img = imageList[j];
-                                    if (parseInt(j) === imgNum) {
-                                        imgHtml += '<a href="' + img + '" class="albumImage" target="_blank"><img src="' + img + '" style="max-width: 100%; min-width: 100%; margin-bottom: 5px; border-style: none;" /></a>';
-                                    }
-                                    else {
-                                        imgHtml += '<a href="' + imageList[j] + '" class="albumImage" style="display: none;" target="_blank"><img src="' + imageList[j] + '" style="max-width: 100%; min-width: 100%; margin-bottom: 5px; border-style: none;" /></a>';
-                                    }
-                                }
+                                var $imgPic = $("<img>").attr('src', imageList[imgNum]);
+                                var $imgLink = $("<a>").attr('href', imageList[imgNum]).addClass('albumImage').append($imgPic);
 
                                 var $thumbnails = $("<div>").addClass('AlbumThumbs');
-                                var $imageInfo = $("<div>").addClass('ImageInfo').html('<h4><a href="' + thisLink + '" target="_blank">' + title + '</a></h4>').append($thumbnails).append($commentsEle);
-                                var $imageDiv = $("<div>").addClass('GalleryImageContainer GalleryAlbumContainer').html(imgHtml).append($imageInfo);
+                                var $imageInfo = $("<div>").addClass('ImageInfo').append($("<h4>").append($("<a>").attr({href: thisLink, target: '_blank', title: title}).text(title))).append($thumbnails).append($commentsEle);
+                                var $imageDiv = $("<div>").addClass('GalleryImageContainer GalleryAlbumContainer').append($imgLink).append($imageInfo).prepend($titleDiv);
 
                                 // Album controls
                                 (function() {
@@ -174,8 +226,10 @@ var toggleRedditImageGallery = function() {
                                         var albumHtml = "";
 
                                         for (var j in imageList) {
+                                            // We only need to display a few images
                                             if (j < from || j >= to)
                                                 continue;
+
                                             (function() {
                                                 var index = j;
                                                 var img = imageList[index];
@@ -187,13 +241,16 @@ var toggleRedditImageGallery = function() {
                                                 });
                                                 if (parseInt(index) === curImg)
                                                     $thumb.addClass('active');
+
                                                 $thumbnails.append($thumb);
+                                                preloadImage(img, null);
                                             }());
                                         }
                                     }
                                     function updateAlbum() {
                                         updateThumbnails();
-                                        $imageDiv.find(".albumImage").hide().eq(curImg).show();
+                                        $imgPic.attr('src', imageList[curImg]);
+                                        $imgLink.attr('href', imageList[curImg])
                                         $imgNumSpan.text('Album (' + (curImg + 1) + '/' + (maxImg + 1) + ')');
                                     }
                                     function prevImg() {
@@ -213,9 +270,26 @@ var toggleRedditImageGallery = function() {
 
                                     $imageDiv.append($prev).append($next);
                                 }());
-                                addItemToGallery($imageDiv, imageList[0]);
+
+                                preloadImage(imageList[imgNum], function() {
+                                    var placed = false;
+                                    var target = targetColumn();
+                                    $(target).find('.GalleryImageContainer').each(function() {
+                                        if ($(this).data('post_num') > postNum) {
+                                            placed = true;
+                                            $imageDiv.insertBefore($(this));
+                                            return false;
+                                        }
+                                    });
+                                    if (!placed) {
+                                        $(target).append($imageDiv);
+                                    }
+                                });
                             });
                         }());
+                    }
+                    else {
+                        console.log('Could not parse:', link)
                     }
                 });
                 $gallery.data('images', JSON.stringify(curImages));
@@ -238,47 +312,10 @@ var toggleRedditImageGallery = function() {
             $gallery.data('inverval', JSON.stringify(updateInterval));
 
             $siteContainer.data('IsGallery', 'false');
-            $isGallery = "false";
             $siteContainer.show();
             $gallery.hide();
             $pageControls.hide();
         }
 
     }());
-}
-
-if (typeof(Storage) !== "undefined") {
-    var redditImageGalleryEnabledIn = [];
-    
-    var url = location.href;
-    var indexOfQuestionMark = url.indexOf('?');
-    if (indexOfQuestionMark >= 0) {
-        url = url.substr(0, indexOfQuestionMark);
-    }
-    else {
-        var indexOfHash = url.indexOf('#');
-        if (indexOfHash >= 0)
-            url = url.substring(0, indexOfHash);
-    }
-    if (!localStorage.RedditImageGallery) {
-        localStorage.RedditImageGallery = [];
-    }
-    else {
-        redditImageGalleryEnabledIn = JSON.parse(localStorage.RedditImageGallery);
-        if (redditImageGalleryEnabledIn.indexOf(url) >= 0) {
-            $(document).ready(toggleRedditImageGallery);
-        }
-    }
-
-    toggleRedditImageGalleryState = function() {
-        // Save state
-        var curIndex = redditImageGalleryEnabledIn.indexOf(url);
-        if (curIndex >= 0) {
-            redditImageGalleryEnabledIn.splice(curIndex, 1);
-        }
-        else {
-            redditImageGalleryEnabledIn.push(url);
-        }
-        localStorage.RedditImageGallery = JSON.stringify(redditImageGalleryEnabledIn);
-    };
-}
+};

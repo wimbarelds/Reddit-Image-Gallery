@@ -1,24 +1,25 @@
 {
-  "name": "Reddit Image Gallery",
-  "version": "1.1.1",
-  "description": "Creates an image gallery of all imgur images and albums",
-  "permissions": [
-    "activeTab" , "tabs", "http://www.reddit.com/*"
-  ],
-  "background": {
-    "scripts": ["eventHandler.js"]
-  },
-  "content_scripts": [
-  {
-    "matches": ["http://www.reddit.com/*"],
-    "js": ["jquery.js", "persistence.js"],
-    "css": ["style.css"],
-    "run_at": "document_start",
-    "all_frames": true
-  }],
-  "browser_action": {
-    "default_icon": "icon.png",
-    "default_title": "Make Gallery"
-  },
-  "manifest_version": 2
+    "name": "Reddit Image Gallery",
+    "version": "1.2.0",
+    "description": "Creates an image gallery of all imgur images and albums",
+    "permissions": [
+        "activeTab", "tabs", "http://www.reddit.com/*"
+    ],
+    "web_accessible_resources": [
+        "jquery.min.map"
+    ],
+    "icons": {"16": "Icons/16.png",
+        "48": "Icons/48.png",
+        "128": "Icons/128.png"}
+    ,
+    "content_scripts": [
+        {
+            "matches": ["http://www.reddit.com/*"],
+            "js": ["jquery.js", "gallery.js", "initialize.js"],
+            "css": ["style.css"],
+            "run_at": "document_start",
+            "all_frames": true
+        }]
+    ,
+    "manifest_version": 2
 }

@@ -1,0 +1,5 @@
+reddit image gallery:
+- info popup?
+- if multi-reddit, show subreddit somewhere
+- show title better
+- lower z-index, cant click sidebar
