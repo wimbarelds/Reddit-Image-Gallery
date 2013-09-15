@@ -2,7 +2,8 @@ var toggleRedditImageGallery = function() {
     // Create private scope
     (function() {
         // Toggle our state if that function loaded
-        if (typeof toggleRedditImageGalleryState === "function") toggleRedditImageGalleryState();
+        if (typeof toggleRedditImageGalleryState === "function")
+            toggleRedditImageGalleryState();
         // Check is Never Ending Reddit is enabled
         var neverEndingReddit = ($("#progressIndicator.neverEndingReddit").length > 0);
         // Find the elements we need to use
@@ -68,6 +69,45 @@ var toggleRedditImageGallery = function() {
                 return shortest;
             }
 
+            function addImage($this, postNum, link, image, title) {
+                var $titleDiv = $("<div>").addClass('ImageTitleBar');
+                $this.find('.arrow').each(function() {
+                    var $arrow = $(this);
+                    var $clone = $arrow.clone();
+                    $clone.removeAttr('onclick');
+                    $clone.click(function() {
+                        $arrow.trigger('click');
+                        $clone.attr('class', $arrow.attr('class'));
+                    });
+                    $clone.appendTo($titleDiv);
+                });
+                var $source = $("<span>").addClass('rig_source').appendTo($titleDiv);
+                var $sub = $this.find('a.subreddit');
+                if ($sub.length > 0)
+                    $source.text('Subreddit: ').append($sub).append(' | ');
+                $("<span>").text("Source: ").append($this.find('span.domain a')).appendTo($source);
+
+                var $commentsEle = $this.find('.comments');
+                var $imageDiv = $("<div>").addClass('GalleryImageContainer').data('post_num', postNum);
+                var $imageInfo = $("<div>").addClass('ImageInfo').append($("<h4>").append($("<a>").attr({href: link, target: '_blank', title: title}).text(title))).append($commentsEle);
+                $imageDiv.html('<a href="' + link + '" target="_blank"><img src="' + image + '" /></a>').append($imageInfo).prepend($titleDiv);
+
+                preloadImage(image, function() {
+                    var placed = false;
+                    var target = targetColumn();
+                    $(target).find('.GalleryImageContainer').each(function() {
+                        if ($this.data('post_num') > postNum) {
+                            placed = true;
+                            $imageDiv.insertBefore($(this));
+                            return false;
+                        }
+                    });
+                    if (!placed) {
+                        $(target).append($imageDiv);
+                    }
+                });
+            }
+
             function UpdateGallery() {
                 // The links that have already been loaded
                 var curImages = JSON.parse($gallery.data('images'));
@@ -89,6 +129,10 @@ var toggleRedditImageGallery = function() {
                     curImages.push(link);
                     var postNum = ++postNumCounter;
 
+                    // Convert mobile imgur links to regular
+                    if (link.substring(0, 19) === "http://m.imgur.com/") {
+                        link = "http://i.imgur.com/" + link.substring(19);
+                    }
                     // [IMGUR] Fix image link missing .jpg/.png/.gif
                     if (link.substring(0, 17) === "http://imgur.com/" && link.substring(17, 19) !== "a/") {
                         var split = link.substring(17).split(".");
@@ -101,54 +145,60 @@ var toggleRedditImageGallery = function() {
                         }
                     }
 
-                    // Regular Imgur Image
-                    if (link.substring(0, 19) === "http://i.imgur.com/") {
-                        var $this = $(this);
-                        var $titleDiv = $("<div>").addClass('ImageTitleBar');
-                        $this.find('.arrow').each(function(){
-                            var $arrow = $(this);
-                            var $clone = $arrow.clone();
-                            $clone.removeAttr('onclick');
-                            $clone.click(function(){
-                                $arrow.trigger('click');
-                                $clone.attr('class', $arrow.attr('class'));
-                            });
-                            $clone.appendTo($titleDiv);
-                        });
-                        var $source = $("<span>").addClass('rig_source').appendTo($titleDiv);
-                        var $sub = $this.find('a.subreddit');
-                        if($sub.length > 0) $source.text('Subreddit: ').append($sub).append(' | ');
-                        $("<span>").text("Source: ").append($this.find('span.domain a')).appendTo($source);
-                        
-                        var $commentsEle = $this.find('.comments');
-                        var $imageDiv = $("<div>").addClass('GalleryImageContainer').data('post_num', postNum);
-                        var $imageInfo = $("<div>").addClass('ImageInfo').append($("<h4>").append($("<a>").attr({href: link, target: '_blank', title: title}).text(title))).append($commentsEle);
-                        $imageDiv.html('<a href="' + link + '" target="_blank"><img src="' + link + '" /></a>').append($imageInfo).prepend($titleDiv);
-
-                        preloadImage(link, function() {
-                            var placed = false;
-                            var target = targetColumn();
-                            $(target).find('.GalleryImageContainer').each(function() {
-                                if ($this.data('post_num') > postNum) {
-                                    placed = true;
-                                    $imageDiv.insertBefore($(this));
-                                    return false;
+                    var isAlbum = false;
+                    if (link.substring(0, 19) === "http://i.imgur.com/")
+                        addImage($(this), postNum, link, link, title);
+                    else if (link.substring(0, 19) === "http://imgur.com/a/")
+                        isAlbum = true;
+                    else {
+                        var ext = link.split(".").pop().toLowerCase();
+                        if (ext === "jpg" || ext === "jpeg" || ext === "gif" || ext === "png")
+                            addImage($(this), postNum, link, link, title);
+                        else if (link.indexOf('tumblr.com/post/') >= 0) {
+                            // Tumblr Post, not direct image link
+                            var cleanLink = link.split("#")[0];
+                            // Try get image url
+                            var splitUrl = cleanLink.split("/");
+                            var base_hostname = splitUrl[2];
+                            var postId = splitUrl[4];
+                            var apiUrl = 'http://api.tumblr.com/v2/blog/' + base_hostname + '/posts?api_key=eGBoYN6P3un5qGNALl1cyDBY34eCr6hDy1iZU9ZfSmPuLYcvN3&id=' + postId;
+                            //$("<script>").attr({"type": "text/javascript", "src": apiUrl}).appendTo($("head"));
+                            // eGBoYN6P3un5qGNALl1cyDBY34eCr6hDy1iZU9ZfSmPuLYcvN3
+                            var $this = $(this);
+                            
+                            $.getJSON(apiUrl, function(json) {
+                                if (json.meta.status != 200 || json.meta.msg != "OK")
+                                    return;
+                                var post = json.response.posts[0];
+                                if (post.type === "text") {
+                                    var html = post.body;
+                                    var index1 = html.indexOf('<a href="http://') + 9;
+                                    var index2 = html.indexOf('"><img src="', index1);
+                                    var imageUrl = html.substring(index1, index2);
+                                    addImage($this, postNum, link, imageUrl, title);
+                                }
+                                else if (post.type === "photo") {
+                                    var imageUrl = post.photos[0].alt_sizes[0].url;
+                                    addImage($this, postNum, link, imageUrl, title);
                                 }
                             });
-                            if (!placed) {
-                                $(target).append($imageDiv);
-                            }
-                        });
+                        }
+                        else
+                        {
+                            console.log('[Reddit Image Gallery] Could not parse:', link, title);
+                        }
+
                     }
+
                     // Imgur Album
-                    else if (link.substring(0, 19) === "http://imgur.com/a/") {
+                    if (isAlbum) {
                         var $this = $(this);
                         var $titleDiv = $("<div>").addClass('ImageTitleBar');
-                        $this.find('.arrow').each(function(){
+                        $this.find('.arrow').each(function() {
                             var $arrow = $(this);
                             var $clone = $arrow.clone();
                             $clone.removeAttr('onclick');
-                            $clone.click(function(){
+                            $clone.click(function() {
                                 $arrow.trigger('click');
                                 $clone.attr('class', $arrow.attr('class'));
                             });
@@ -156,9 +206,10 @@ var toggleRedditImageGallery = function() {
                         });
                         var $source = $("<span>").addClass('rig_source').appendTo($titleDiv);
                         var $sub = $this.find('a.subreddit');
-                        if($sub.length > 0) $source.text('Subreddit: ').append($sub).append(' | ');
+                        if ($sub.length > 0)
+                            $source.text('Subreddit: ').append($sub).append(' | ');
                         $("<span>").text("Source: ").append($this.find('span.domain a')).appendTo($source);
-                        
+
                         var $commentsEle = $this.find('.comments');
                         var spliturl = link.substring(19).split("#");
                         var album = spliturl[0];
@@ -288,13 +339,9 @@ var toggleRedditImageGallery = function() {
                             });
                         }());
                     }
-                    else {
-                        console.log('Could not parse:', link)
-                    }
                 });
                 $gallery.data('images', JSON.stringify(curImages));
             }
-            ;
 
             UpdateGallery();
             var curHtml = $siteContainer.html();

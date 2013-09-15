@@ -3,7 +3,7 @@
     "version": "1.2.0",
     "description": "Creates an image gallery of all imgur images and albums",
     "permissions": [
-        "activeTab", "tabs", "http://www.reddit.com/*"
+        "activeTab", "tabs", "http://www.reddit.com/*", "http://api.tumblr.com/v2/blog/*"
     ],
     "web_accessible_resources": [
         "jquery.min.map"
